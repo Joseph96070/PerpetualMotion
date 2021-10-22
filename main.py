@@ -87,33 +87,63 @@ ramp = stepper(port = 0, speed = INIT_RAMP_SPEED)
 class MainScreen(Screen):
     version = cyprus.read_firmware_version()
     staircaseSpeedText = '0'
-    rampSpeed = INIT_RAMP_SPEED
-    staircaseSpeed = 40
+    #rampSpeed = INIT_RAMP_SPEED
+    #staircaseSpeed = 40
+    s0 = stepper(port=0, micro_steps=32, hold_current=20, run_current=20, accel_current=20, deaccel_current=20,
+                 steps_per_unit=200, speed=2)
 
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
         self.initialize()
 
     def toggleGate(self):
-        print("Open and Close gate here")
+        OPEN = True
+        print("hello")
+        if not OPEN:
+            cyprus.set_servo_position(2, 0.1)
+        else:
+            cyprus.set_servo_position(2, .4)
+            OPEN = False
 
     def toggleStaircase(self):
-        print("Turn on and off staircase here")
+        cyprus.set_pwm_values(1, period_value=100000, compare_value=100000, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
+        sleep(10)
+        cyprus.set_pwm_values(1, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
         
     def toggleRamp(self):
-        print("Move ramp up and down here")
-        
+        self.s0.go_until_press(0, 6400*5)
+        self.s0.setAsHome()
+        x = self.s0.get_position_in_units()
+        if self.s0.get_position_in_units() != x:
+            self.s0.go_until_press(0, 6400*5)
+            print("moving home")
+        else:
+            self.s0.start_relative_move(28.5)
+            while self.s0.isBusy():
+                sleep(.1)
+            print("moving up")
+            self.s0.go_until_press(0, 6400*5)
+
     def auto(self):
-        print("Run through one cycle of the perpetual motion machine")
+        self.setRampSpeed()
+        self.setStaircaseSpeed()
+        self.toggleRamp()
+        sleep(1)
+        self.toggleStaircase()
+        sleep(3)
+        self.toggleGate()
+       # self.initialize()
+
+    def setRampSpeed(self):
+        print(self.rampSpeed.value)
         
-    def setRampSpeed(self, speed):
-        print("Set the ramp speed and update slider text")
-        
-    def setStaircaseSpeed(self, speed):
-        print("Set the staircase speed and update slider text")
+    def setStaircaseSpeed(self):
+        print(self.staircaseSpeed.value)
         
     def initialize(self):
-        print("Close gate, stop staircase and home ramp here")
+        cyprus.set_servo_position(2, 0)
+        cyprus.set_pwm_values(1, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
+        self.s0.go_until_press(0, 6400)
 
     def resetColors(self):
         self.ids.gate.color = YELLOW
