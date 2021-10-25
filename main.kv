@@ -30,7 +30,7 @@
             background_normal: ''
             size_hint: None,None
             size: 300,100
-            on_press: root.auto()
+            on_press: root.auto_Thread()
             on_release: root.resetColors()
 
         # Turn on/off gate
@@ -57,7 +57,7 @@
             background_normal: ''
             size_hint: None,None
             size: 300,100
-            on_press: root.toggleRamp()
+            on_press: root.ramp_Thread()
             on_release: root.resetColors()
 
         DPEAButton:
@@ -70,7 +70,7 @@
             background_normal: ''
             size_hint: None,None
             size: 300,100
-            on_press: root.toggleStaircase()
+            on_press: root.stairs_Thread()
             on_release: root.resetColors()
 
 	##################
@@ -80,8 +80,8 @@
         Slider:
             id: rampSpeed
             orientation: 'horizontal'
-            min: 10
-            max: 200
+            min: 1
+            max: 8
             step: 1
             center_x: root.width * 0.6
             y: root.height * 0.15
@@ -91,8 +91,8 @@
         Slider:
             id: staircaseSpeed
             orientation: 'horizontal'
-            min: 10
-            max: 50
+            min: 0
+            max: 100000
             step: 1
             center_x: root.width * 0.6
             y: root.height * 0.05

@@ -31,6 +31,7 @@ from time import sleep
 import RPi.GPIO as GPIO 
 from pidev.stepper import stepper
 from pidev.Cyprus_Commands import Cyprus_Commands_RPi as cyprus
+from threading import Thread
 
 
 # ////////////////////////////////////////////////////////////////
@@ -62,6 +63,7 @@ class MyApp(App):
 Builder.load_file('main.kv')
 Window.clearcolor = (.1, .1,.1, 1) # (WHITE)
 
+cyprus.initialize()
 cyprus.open_spi()
 
 # ////////////////////////////////////////////////////////////////
@@ -88,7 +90,8 @@ class MainScreen(Screen):
     version = cyprus.read_firmware_version()
     staircaseSpeedText = '0'
     #rampSpeed = INIT_RAMP_SPEED
-    #staircaseSpeed = 40
+    #stairCaseSpeed = 40
+    GATEOPEN = True
     s0 = stepper(port=0, micro_steps=32, hold_current=20, run_current=20, accel_current=20, deaccel_current=20,
                  steps_per_unit=200, speed=2)
 
@@ -97,13 +100,12 @@ class MainScreen(Screen):
         self.initialize()
 
     def toggleGate(self):
-        OPEN = True
-        print("hello")
-        if not OPEN:
+        if not self.GATEOPEN:
             cyprus.set_servo_position(2, 0.1)
+            self.GATEOPEN = True
         else:
             cyprus.set_servo_position(2, .4)
-            OPEN = False
+            self.GATEOPEN = False
 
     def toggleStaircase(self):
         cyprus.set_pwm_values(1, period_value=100000, compare_value=100000, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
@@ -111,39 +113,46 @@ class MainScreen(Screen):
         cyprus.set_pwm_values(1, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
         
     def toggleRamp(self):
+        self.s0.start_relative_move(1)
+        while self.s0.get_position_in_units() < 28:
+            self.s0.go_until_press(1, 6400*self.rampSpeed.value)
+            sleep(.1)
         self.s0.go_until_press(0, 6400*5)
-        self.s0.setAsHome()
-        x = self.s0.get_position_in_units()
-        if self.s0.get_position_in_units() != x:
-            self.s0.go_until_press(0, 6400*5)
-            print("moving home")
-        else:
-            self.s0.start_relative_move(28.5)
-            while self.s0.isBusy():
-                sleep(.1)
-            print("moving up")
-            self.s0.go_until_press(0, 6400*5)
 
     def auto(self):
-        self.setRampSpeed()
-        self.setStaircaseSpeed()
         self.toggleRamp()
+        self.toggleStaircase()
         sleep(1)
         self.toggleStaircase()
         sleep(3)
         self.toggleGate()
-       # self.initialize()
+        sleep(1)
+        cyprus.set_servo_position(2, 0.05)
+
+    def auto_Thread(self):
+        Thread(target=self.auto).start()
+
+    def ramp_Thread(self):
+        Thread(target=self.toggleRamp).start()
+
+    def stairs_Thread(self):
+        Thread(target=self.toggleStaircase).start()
 
     def setRampSpeed(self):
-        print(self.rampSpeed.value)
-        
+        self.s0.set_speed(self.rampSpeed.value)
+
     def setStaircaseSpeed(self):
-        print(self.staircaseSpeed.value)
+        cyprus.set_pwm_values(1, period_value=100000, compare_value= self.staircaseSpeed.value, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
         
     def initialize(self):
-        cyprus.set_servo_position(2, 0)
+        cyprus.initialize()
+        cyprus.set_servo_position(2, 0.1)
         cyprus.set_pwm_values(1, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
-        self.s0.go_until_press(0, 6400)
+        self.s0.go_until_press(0, 6400*5)
+        while self.s0.isBusy():
+            sleep(.1)
+        self.s0.setAsHome()
+        print(self.s0.get_position_in_units())
 
     def resetColors(self):
         self.ids.gate.color = YELLOW
