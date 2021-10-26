@@ -121,8 +121,7 @@ class MainScreen(Screen):
 
     def auto(self):
         self.toggleRamp()
-        self.toggleStaircase()
-        sleep(1)
+        sleep(1.5)
         self.toggleStaircase()
         sleep(3)
         self.toggleGate()
