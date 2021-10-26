@@ -151,6 +151,7 @@ class MainScreen(Screen):
         while self.s0.isBusy():
             sleep(.1)
         self.s0.setAsHome()
+
         print(self.s0.get_position_in_units())
 
     def resetColors(self):
